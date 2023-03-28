@@ -4,8 +4,6 @@ const mongoose = require('mongoose');
 
 require ('dotenv').config();
 
-// mongoose.connect(process.env.DB_URL);
-
 const Book = require('./models/book.js');
 
 async function seedDatabase() {
