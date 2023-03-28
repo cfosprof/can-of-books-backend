@@ -42,15 +42,17 @@ app.get('/books', async (req, res) => {
 
 app.post('/books', async (req, res) => {
   try {
-    const { title, author, description, coverImageUrl } = req.body;
+    const { title, author, description, status } = req.body;
 
     let finalDescription = description;
+    let coverImageUrl;
     if (!description) {
       const bookDetails = await fetchBookCover(title, author);
       finalDescription = bookDetails.description || 'No description provided.';
+      coverImageUrl = bookDetails.coverImageUrl;
     }
 
-    const newBook = new Book({ title, author, description: finalDescription, coverImageUrl });
+    const newBook = new Book({ title, author, description: finalDescription, coverImageUrl, status: status || 'active' });
     await newBook.save();
     res.status(201).json(newBook);
   } catch (error) {
@@ -58,6 +60,7 @@ app.post('/books', async (req, res) => {
     res.status(500).send('Error creating book');
   }
 });
+
 
 
 app.delete('/books/:id', async (req, res) => {

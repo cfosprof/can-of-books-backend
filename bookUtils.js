@@ -2,7 +2,7 @@ const axios = require('axios');
 
 async function fetchBookCover(title) {
   try {
-    const response = await axios.get(`'https://covers.openlibrary.org/search.json?title=${encodeURIComponent(title)}`);
+    const response = await axios.get(`https://openlibrary.org/search.json?title=${encodeURIComponent(title)}`);
     const data = response.data;
 
     if (data.docs.length > 0) {
@@ -11,7 +11,7 @@ async function fetchBookCover(title) {
       let author = null;
 
       if (book.cover_i) {
-        coverImageUrl = `'https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+        coverImageUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
       }
 
       if (book.author_name && book.author_name.length > 0) {
@@ -29,13 +29,23 @@ async function fetchBookCover(title) {
 
 async function updateBookDetails(books) {
   for (const book of books) {
+    let shouldUpdate = false;
+
     if (!book.coverImageUrl || !book.author) {
       const { coverImageUrl, author } = await fetchBookCover(book.title);
-      if (!book.coverImageUrl) {
+
+      if (!book.coverImageUrl && coverImageUrl) {
         book.coverImageUrl = coverImageUrl;
+        shouldUpdate = true;
       }
-      if (!book.author) {
+
+      if (!book.author && author) {
         book.author = author;
+        shouldUpdate = true;
+      }
+
+      if (shouldUpdate) {
+        await book.save();
       }
     }
   }
