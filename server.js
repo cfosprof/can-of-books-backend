@@ -6,6 +6,8 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const Book = require('./models/book.js');
 const seedDatabase = require('./seed.js');
+const axios = require('axios');
+
 
 
 //create an instance of express, and USE JSON middleweare to parse incoming strings
@@ -20,6 +22,9 @@ app.use(cors());
 //connect the mongoDB database to the server using mongoose
 mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true, useUnifiedTopology: true});
 
+const PORT = process.env.PORT || 3001;
+
+
 //set up database connection
 
 const db = mongoose.connection;
@@ -28,14 +33,30 @@ db.once('open', () => {
   console.log('Connected to the database');
   seedDatabase(); 
 });
-
+app.get('/', (request, response) => {
+  response.send('Hello World')
+})
 
 
 //Seed the database with data from three Book objects with all available attributes
 
 app.get('/books', async (req, res) => {
-  try{
+  try {
     const books = await Book.find();
+
+    // Fetch book cover images and author's name
+    for (const book of books) {
+      if (!book.coverImageUrl || !book.author) {
+        const { coverImageUrl, author } = await fetchBookCover(book.title);
+        if (!book.coverImageUrl) {
+          book.coverImageUrl = coverImageUrl;
+        }
+        if (!book.author) {
+          book.author = author;
+        }
+      }
+    }
+
     res.json(books);
   } catch (error) {
     console.error('Error fetching books:', error);
@@ -43,8 +64,36 @@ app.get('/books', async (req, res) => {
   }
 });
 
+async function fetchBookCover(title) {
+  try {
+    const response = await axios.get(`http://openlibrary.org/search.json?title=${encodeURIComponent(title)}`);
+    const data = response.data;
 
-const PORT = process.env.PORT || 3001;
+    if (data.docs.length > 0) {
+      const book = data.docs[0];
+      let coverImageUrl = null;
+      let author = null;
+
+      if (book.cover_i) {
+        coverImageUrl = `http://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+      }
+
+      if (book.author_name && book.author_name.length > 0) {
+        author = book.author_name[0];
+      }
+
+      return { coverImageUrl, author };
+    }
+  } catch (error) {
+    console.error(`Error fetching book cover for '${title}':`, error);
+  }
+
+  return { coverImageUrl: null, author: null };
+}
+
+
+
+
 
 app.get('/test', (request, response) => {
 
@@ -54,11 +103,3 @@ app.get('/test', (request, response) => {
 
 app.listen(PORT, () => console.log(`listening on ${PORT}`));
 
-
-// Modularize by creating schema and model files
-
-//create a books route
-
-//use a REST client to hit the route and test the server
-
-// when a client sends GET request to /books, send back a list of all books from the book collection and send it back to the client in a json response object.

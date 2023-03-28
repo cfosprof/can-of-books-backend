@@ -11,17 +11,20 @@ async function seedDatabase() {
     {
       title: 'The Hobbit',
       description: 'A hobbit goes on an adventure',
-      status: 'available'
+      status: 'available',
+      author: 'J.R.R. Tolkien'
     },
     {
       title: 'The Fellowship of the Ring',
       description: 'A hobbit goes on an adventure',
-      status: 'available'
+      status: 'available',
+      author: 'J.R.R. Tolkien'
     },
     {
       title: 'The Two Towers',
       description: 'A hobbit goes on an adventure',
-      status: 'available'
+      status: 'available',
+      author: 'J.R.R. Tolkien'
     },
   ];
   try {
