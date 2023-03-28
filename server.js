@@ -1,5 +1,4 @@
 'use strict';
-//Require express, mongoose, cors, dotenv
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -8,24 +7,15 @@ const Book = require('./models/book.js');
 const seedDatabase = require('./seed.js');
 const axios = require('axios');
 
-
-
-//create an instance of express, and USE JSON middleweare to parse incoming strings
 const app = express();
 app.use(express.json());
 
-
-
-//use cors middleware to allow cross origin requests(front end to backend)
 app.use(cors());
 
-//connect the mongoDB database to the server using mongoose
 mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true, useUnifiedTopology: true});
 
 const PORT = process.env.PORT || 3001;
 
-
-//set up database connection
 
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
