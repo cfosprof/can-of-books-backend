@@ -88,5 +88,17 @@ app.delete('/books/:id', async (req, res) => {
   }
 });
 
+app.put('/books/:id', async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    const updatedBook = await Book.findByIdAndUpdate(bookId, req.body, { new: true });
+    res.json(updatedBook);
+  } catch (error) {
+    console.error('Error updating book:', error);
+    res.status(500).send('Error updating book');
+  }
+});
+
+
 // Start the server
 app.listen(PORT, () => console.log(`listening on ${PORT}`));
