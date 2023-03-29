@@ -1,51 +1,51 @@
 'use strict';
+
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+
+// Import custom modules
 const Book = require('./models/book.js');
 const seedDatabase = require('./seed.js');
-const axios = require('axios');
+const { updateBookDetails } = require('./bookUtils');
 
+// Create an Express app
 const app = express();
+
+// Enable JSON body parsing
 app.use(express.json());
 
+// Enable CORS allows requests from server to access resources in a different origin
 app.use(cors());
 
-mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true, useUnifiedTopology: true});
+// Connect to the MongoDB database
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
+// Set the port number to call PORT from environment variables or 3001
 const PORT = process.env.PORT || 3001;
 
-
+// Set up database connection events
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
   console.log('Connected to the database');
-  seedDatabase(); 
+  seedDatabase();
 });
+
+// Define routes
+// Root route
 app.get('/', (request, response) => {
   response.send('Hello World')
-})
+});
 
-
-//Seed the database with data from three Book objects with all available attributes
-
+// Get all books route
 app.get('/books', async (req, res) => {
   try {
     const books = await Book.find();
 
-    // Fetch book cover images and author's name
-    for (const book of books) {
-      if (!book.coverImageUrl || !book.author) {
-        const { coverImageUrl, author } = await fetchBookCover(book.title);
-        if (!book.coverImageUrl) {
-          book.coverImageUrl = coverImageUrl;
-        }
-        if (!book.author) {
-          book.author = author;
-        }
-      }
-    }
+    await updateBookDetails(books);
 
     res.json(books);
   } catch (error) {
@@ -54,42 +54,39 @@ app.get('/books', async (req, res) => {
   }
 });
 
-async function fetchBookCover(title) {
+// Create a new book route
+app.post('/books', async (req, res) => {
   try {
-    const response = await axios.get(`http://openlibrary.org/search.json?title=${encodeURIComponent(title)}`);
-    const data = response.data;
+    const { title, author, description, status } = req.body;
 
-    if (data.docs.length > 0) {
-      const book = data.docs[0];
-      let coverImageUrl = null;
-      let author = null;
-
-      if (book.cover_i) {
-        coverImageUrl = `http://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
-      }
-
-      if (book.author_name && book.author_name.length > 0) {
-        author = book.author_name[0];
-      }
-
-      return { coverImageUrl, author };
+    let finalDescription = description;
+    let coverImageUrl;
+    if (!description) {
+      const bookDetails = await fetchBookCover(title, author);
+      finalDescription = bookDetails.description || 'No description provided.';
+      coverImageUrl = bookDetails.coverImageUrl;
     }
+
+    const newBook = new Book({ title, author, description: finalDescription, coverImageUrl, status: status || 'active' });
+    await newBook.save();
+    res.status(201).json(newBook);
   } catch (error) {
-    console.error(`Error fetching book cover for '${title}':`, error);
+    console.error('Error creating book:', error);
+    res.status(500).send('Error creating book');
   }
+});
 
-  return { coverImageUrl: null, author: null };
-}
+// Delete a book by ID route
+app.delete('/books/:id', async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    await Book.findByIdAndDelete(bookId);
+    res.status(204).send('Book deleted');
+  } catch (error) {
+    console.error('Error deleting book:', error);
+    res.status(500).send('Error deleting book');
+  }
+});
 
-
-
-
-
-app.get('/test', (request, response) => {
-
-  response.send('test request received')
-
-})
-
+// Start the server
 app.listen(PORT, () => console.log(`listening on ${PORT}`));
-
